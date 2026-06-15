@@ -6,94 +6,134 @@
     <title>Singleton PDF — Merge PDFs in Your Browser</title>
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
-    <div class="mx-auto max-w-3xl px-4 py-8 sm:py-12">
-      <!-- Header -->
-      <header class="mb-8 text-center">
-        <h1 class="text-3xl font-bold tracking-tight text-blue-700 sm:text-4xl">
-          Singleton PDF
-        </h1>
-        <p class="mt-2 text-sm text-slate-500">
-          Merge multiple PDFs into one. Processed right in your browser —
-          <span class="font-medium text-slate-600">no files are uploaded.</span>
-        </p>
-      </header>
+    <div class="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+      <!-- ================= Main view: upload, file list, merge ================= -->
+      <div id="main-view" class="mx-auto max-w-3xl">
+        <!-- Header -->
+        <header class="mb-8 text-center">
+          <h1 class="text-3xl font-bold tracking-tight text-blue-700 sm:text-4xl">
+            Singleton PDF
+          </h1>
+          <p class="mt-2 text-sm text-slate-500">
+            Merge multiple PDFs into one. Processed right in your browser —
+            <span class="font-medium text-slate-600">no files are uploaded.</span>
+          </p>
+        </header>
 
-      <!-- Drop zone -->
-      <section
-        id="drop-zone"
-        class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-12 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/40"
-      >
-        <svg class="mb-3 h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-        </svg>
-        <p class="text-base font-medium text-slate-700">
-          Drag &amp; drop PDF files here
-        </p>
-        <p class="mt-1 text-sm text-slate-400">or</p>
-        <button
-          type="button"
-          id="browse-btn"
-          class="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+        <!-- Drop zone -->
+        <section
+          id="drop-zone"
+          class="flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-slate-300 bg-white px-6 py-12 text-center transition-colors hover:border-blue-400 hover:bg-blue-50/40"
         >
-          Choose PDFs
-        </button>
-        <input
-          type="file"
-          id="file-input"
-          accept="application/pdf"
-          multiple
-          hidden
-        />
-      </section>
+          <svg class="mb-3 h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+          </svg>
+          <p class="text-base font-medium text-slate-700">
+            Drag &amp; drop PDF files here
+          </p>
+          <p class="mt-1 text-sm text-slate-400">or</p>
+          <button
+            type="button"
+            id="browse-btn"
+            class="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
+          >
+            Choose PDFs
+          </button>
+          <input type="file" id="file-input" accept="application/pdf" multiple hidden />
+        </section>
 
-      <!-- Error banner -->
-      <p id="error-msg" class="mt-3 hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700"></p>
+        <!-- Error banner -->
+        <p id="error-msg" class="mt-3 hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700"></p>
 
-      <!-- File list -->
-      <section class="mt-6">
-        <div class="mb-2 flex items-center justify-between">
-          <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
-            Files
-          </h2>
-          <span id="file-count" class="text-xs text-slate-400"></span>
-        </div>
-
-        <ul id="file-list" class="space-y-2"></ul>
-
-        <p id="empty-state" class="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
-          No files yet. Add at least 2 PDFs to merge.
-        </p>
-      </section>
-
-      <!-- Action bar -->
-      <section class="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
-        <div class="flex-1">
-          <label for="output-name" class="mb-1 block text-sm font-medium text-slate-600">
-            Output file name
-          </label>
-          <div class="flex items-center rounded-lg border border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
-            <input
-              type="text"
-              id="output-name"
-              value="merged"
-              placeholder="merged"
-              class="w-full rounded-l-lg bg-transparent px-3 py-2 text-sm outline-none"
-            />
-            <span class="select-none px-3 py-2 text-sm text-slate-400">.pdf</span>
+        <!-- File list -->
+        <section class="mt-6">
+          <div class="mb-2 flex items-center justify-between">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+              Files
+            </h2>
+            <span id="file-count" class="text-xs text-slate-400"></span>
           </div>
-        </div>
-        <button
-          type="button"
-          id="merge-btn"
-          disabled
-          class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300"
-        >
-          Merge &amp; Download
-        </button>
-      </section>
+
+          <ul id="file-list" class="space-y-2"></ul>
+
+          <p id="empty-state" class="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
+            No files yet. Add at least 2 PDFs to merge.
+          </p>
+        </section>
+
+        <!-- Action bar -->
+        <section class="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
+          <div class="flex-1">
+            <label for="output-name" class="mb-1 block text-sm font-medium text-slate-600">
+              Output file name
+            </label>
+            <div class="flex items-center rounded-lg border border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+              <input type="text" id="output-name" value="merged" placeholder="merged"
+                class="w-full rounded-l-lg bg-transparent px-3 py-2 text-sm outline-none" />
+              <span class="select-none px-3 py-2 text-sm text-slate-400">.pdf</span>
+            </div>
+          </div>
+          <button type="button" id="edit-pages-btn" disabled
+            class="inline-flex items-center justify-center gap-2 rounded-lg border border-blue-600 px-5 py-2.5 text-sm font-semibold text-blue-700 transition hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-300">
+            Edit pages
+          </button>
+          <button type="button" id="merge-btn" disabled
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300">
+            Merge &amp; Download
+          </button>
+        </section>
+      </div>
+
+      <!-- ================= Editor view: page-level reorder/delete ================= -->
+      <div id="editor-view" class="hidden">
+        <header class="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <button type="button" id="back-btn"
+              class="mb-1 inline-flex items-center gap-1 text-sm font-medium text-blue-700 hover:text-blue-800">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+              Back to files
+            </button>
+            <h2 class="text-2xl font-bold tracking-tight text-blue-700">Page Editor</h2>
+            <p class="mt-0.5 text-sm text-slate-500">
+              Drag pages to reorder · click <span class="font-medium">×</span> to drop a page from the output.
+              <span id="page-count" class="ml-1 text-slate-400"></span>
+            </p>
+          </div>
+          <button type="button" id="reset-pages-btn"
+            class="self-start rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-600 transition hover:bg-slate-100">
+            Reset to file order
+          </button>
+        </header>
+
+        <p id="editor-error" class="mb-3 hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700"></p>
+
+        <div id="page-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"></div>
+
+        <p id="page-empty" class="hidden rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400">
+          No pages left. Reset to file order, or go back and add files.
+        </p>
+
+        <!-- Editor action bar -->
+        <section class="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
+          <div class="flex-1">
+            <label for="editor-output-name" class="mb-1 block text-sm font-medium text-slate-600">
+              Output file name
+            </label>
+            <div class="flex items-center rounded-lg border border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
+              <input type="text" id="editor-output-name" value="merged" placeholder="merged"
+                class="w-full rounded-l-lg bg-transparent px-3 py-2 text-sm outline-none" />
+              <span class="select-none px-3 py-2 text-sm text-slate-400">.pdf</span>
+            </div>
+          </div>
+          <button type="button" id="merge-pages-btn"
+            class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300">
+            Merge &amp; Download
+          </button>
+        </section>
+      </div>
 
       <footer class="mt-10 text-center text-xs text-slate-400">
-        100% client-side · pdf-lib · SortableJS
+        100% client-side · pdf-lib · pdf.js · SortableJS
       </footer>
     </div>
 

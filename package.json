@@ -11,6 +11,7 @@
   },
   "dependencies": {
     "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.0.227",
     "sortablejs": "^1.15.6"
   },
   "devDependencies": {

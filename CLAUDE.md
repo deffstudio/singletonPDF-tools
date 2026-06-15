@@ -17,24 +17,38 @@ A 100% client-side PDF tool — there is no backend. Every file is read and proc
 in the browser via `File.arrayBuffer()`; nothing is uploaded. Preserve this invariant:
 do not introduce server uploads or network calls for file data.
 
-Vanilla JS (ES modules), no framework. Three source modules with a deliberate separation:
+Vanilla JS (ES modules), no framework. The app has two views toggled in `main.js`
+(`#main-view` = file list/merge, `#editor-view` = page editor); both live in `index.html`.
+Source modules with a deliberate separation:
 
-- `src/fileStore.js` — the single source of truth for the file list (array of
-  `{ id, file, name, size, pageCount }`). Owns add/remove/reorder/order logic and PDF
+- `src/fileStore.js` — single source of truth for the file list (array of
+  `{ id, file, name, size, pageCount }`). Owns add/remove/reorder logic and PDF
   validation. Holds module-level state; never mutate the list from outside it.
-- `src/pdfMerge.js` — `mergePdfs(File[]) → Uint8Array`. A **pure** function over files
-  with no DOM access, kept separate so the merge logic stays testable and reusable.
-- `src/main.js` — the only module that touches the DOM. Wires upload (click + drag-drop),
-  re-renders the list, integrates SortableJS, and drives merge + download.
+- `src/pageStore.js` — single source of truth for the page editor: a flat, ordered list
+  of `{ id, fileId, file, name, pageIndex }`, one entry per page. Independent of fileStore
+  so users can reorder/delete individual pages without touching the files.
+- `src/pdfMerge.js` — `mergePdfs(File[])` (whole files) and `mergePages([{file, pageIndex}])`
+  (page-level). Both **pure** functions with no DOM access; `mergePages` caches each parsed
+  source doc so interleaved pages don't re-parse.
+- `src/thumbnails.js` — pdf.js thumbnail rendering. Caches one parsed `PDFDocumentProxy`
+  per File; `renderThumbnail` draws a single page to a canvas (DPR-aware).
+- `src/main.js` — the only module that touches the DOM. Wires both views, SortableJS,
+  lazy thumbnail rendering (IntersectionObserver), and downloads.
 
 Key data-flow rule: the DOM is never the source of truth for order. After a SortableJS
-drag, `main.js` calls `fileStore.reorder(oldIndex, newIndex)` to keep state authoritative,
-then renders from `fileStore.getOrdered()`.
+drag, `main.js` calls `fileStore.reorder` / `pageStore.reorder` to keep state
+authoritative, then renders from the store's `getOrdered()`.
 
-`pdf-lib` is used in two places: `fileStore` loads each PDF to read its page count on
-intake, and `pdfMerge` copies pages into a new document. Both load with
-`{ ignoreEncryption: true }` for tolerance; unreadable files are skipped on intake and
-surfaced via the error banner.
+Two stores, kept loosely coupled: `pageStore.syncFrom(items)` rebuilds the page list
+**only** when the file set changed (tracked via a fingerprint of ids + page counts), so
+page-level edits survive closing/reopening the editor; on a rebuild `main.js` clears the
+thumbnail cache. `pageStore.rebuildFrom` (the "Reset to file order" button) forces a rebuild.
+
+`pdf-lib` is used to read page counts on intake (`fileStore`) and to assemble output
+(`pdfMerge`); `pdf.js` is used only for thumbnails. All `pdf-lib` loads use
+`{ ignoreEncryption: true }`; unreadable files are skipped on intake and surfaced via the
+error banner. pdf.js's worker is resolved through Vite via the `?url` import in
+`thumbnails.js` — keep that import form or the worker won't bundle.
 
 ## UI / Tailwind
 
@@ -48,7 +62,6 @@ potential commercial launch. Keep new strings in US English.
 
 ## Scope
 
-Current scope is Phase 1: merge + file reordering only. Roadmap (not yet built):
-page-level editor with pdf.js thumbnails and per-page reorder/delete, plus PDF→image,
-compression, watermarking, and password protection. The fileStore/pdfMerge split was
-designed to extend into the page-level editor.
+Built: whole-file merge + reordering, and the page-level editor (pdf.js thumbnails,
+per-page reorder/delete). Roadmap (not yet built): PDF→image (JPG/PNG), compression,
+watermarking, and password protection.
