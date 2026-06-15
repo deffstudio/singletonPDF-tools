@@ -3,6 +3,8 @@
 A web app for merging multiple PDF files into one — **everything runs in the
 browser**, no files are ever uploaded to a server.
 
+**Live demo: [singleton-pdf.vercel.app](https://singleton-pdf.vercel.app)**
+
 ## Features
 
 **File merging**
