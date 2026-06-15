@@ -1,0 +1,21 @@
+{
+  "name": "singleton-pdf-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Client-side PDF merge tool — all processing in the browser, no upload.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "pdf-lib": "^1.17.1",
+    "sortablejs": "^1.15.6"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.1.11",
+    "tailwindcss": "^4.1.11",
+    "vite": "^6.3.5"
+  }
+}
