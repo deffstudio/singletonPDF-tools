@@ -1,6 +1,6 @@
 {
   "name": "singleton-pdf-tools",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Client-side PDF merge tool — all processing in the browser, no upload.",
