@@ -58,3 +58,24 @@ src/
   thumbnails.js     # pdf.js thumbnail rendering + document cache
   style.css         # Tailwind entry
 ```
+
+## Releasing
+
+Versioning follows [SemVer](https://semver.org/). Pick the bump that matches the change:
+
+- `npm version patch` — bug fixes only (e.g. `0.2.0` → `0.2.1`)
+- `npm version minor` — a new feature, backwards-compatible (e.g. `0.2.0` → `0.3.0`)
+- `npm version major` — stable / breaking milestone (e.g. `0.2.0` → `1.0.0`)
+
+Each command bumps `package.json`, creates a commit, and tags it (`vX.Y.Z`). Then push
+and publish the GitHub release:
+
+```bash
+npm version minor              # bump + commit + tag
+git push --follow-tags         # push the commit and the new tag
+gh release create vX.Y.Z --title "vX.Y.Z - Title" --notes-file notes.md
+```
+
+The repo is connected to Vercel, so pushing to `main` auto-deploys to
+[singleton-pdf.vercel.app](https://singleton-pdf.vercel.app). Tag and release are for
+tracking history — they don't affect deployment.
