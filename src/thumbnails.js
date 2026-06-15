@@ -8,26 +8,26 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
 // Keyed by the File object (stable for the lifetime of a fileStore entry).
 const docCache = new Map(); // File -> Promise<PDFDocumentProxy>
 
+// Share a single worker across all documents. Letting each getDocument() spin up
+// its own worker hangs on the second document, so reuse one (pdf.js multiplexes).
+let sharedWorker = null;
+function getWorker() {
+  if (!sharedWorker) sharedWorker = new pdfjsLib.PDFWorker();
+  return sharedWorker;
+}
+
 function getDoc(file) {
   let doc = docCache.get(file);
   if (!doc) {
-    // getDocument detaches the buffer it's given, so hand it a fresh copy.
-    doc = file.arrayBuffer().then((data) => pdfjsLib.getDocument({ data }).promise);
+    doc = file
+      .arrayBuffer()
+      .then((data) => pdfjsLib.getDocument({ data, worker: getWorker() }).promise);
     docCache.set(file, doc);
   }
   return doc;
 }
 
-/**
- * Render a single page of a PDF into a canvas, sized to fit maxWidth (CSS px)
- * and sharpened for the device pixel ratio.
- *
- * @param {File} file
- * @param {number} pageIndex - 0-based
- * @param {HTMLCanvasElement} canvas
- * @param {number} [maxWidth=200]
- */
-export async function renderThumbnail(file, pageIndex, canvas, maxWidth = 200) {
+async function draw(file, pageIndex, canvas, maxWidth) {
   const doc = await getDoc(file);
   const page = await doc.getPage(pageIndex + 1); // pdf.js pages are 1-based
   const dpr = window.devicePixelRatio || 1;
@@ -41,7 +41,27 @@ export async function renderThumbnail(file, pageIndex, canvas, maxWidth = 200) {
   canvas.style.width = `${Math.floor(viewport.width / dpr)}px`;
   canvas.style.height = `${Math.floor(viewport.height / dpr)}px`;
 
-  await page.render({ canvasContext: canvas.getContext('2d'), viewport }).promise;
+  // pdf.js v6 takes the canvas directly; canvasContext is legacy.
+  await page.render({ canvas, viewport }).promise;
+}
+
+// Render one page at a time. Concurrent pdf.js renders race on the shared worker
+// and leave canvases blank, so callers are queued onto a single chain.
+let chain = Promise.resolve();
+
+/**
+ * Render a single PDF page into a canvas, sized to fit maxWidth (CSS px) and
+ * sharpened for the device pixel ratio. Calls are serialized internally.
+ *
+ * @param {File} file
+ * @param {number} pageIndex - 0-based
+ * @param {HTMLCanvasElement} canvas
+ * @param {number} [maxWidth=200]
+ */
+export function renderThumbnail(file, pageIndex, canvas, maxWidth = 200) {
+  const result = chain.then(() => draw(file, pageIndex, canvas, maxWidth));
+  chain = result.catch(() => {}); // keep the queue alive even if one render fails
+  return result;
 }
 
 /** Destroy cached documents and free their workers (call when files change). */
