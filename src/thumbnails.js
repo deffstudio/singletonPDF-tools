@@ -1,27 +1,13 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// pdf.js runs its parser in a Web Worker; Vite resolves the bundled worker URL.
-pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
+import { loadDocument } from './pdfjs.js';
 
 // Cache one parsed document per File so re-rendering pages is cheap.
 // Keyed by the File object (stable for the lifetime of a fileStore entry).
 const docCache = new Map(); // File -> Promise<PDFDocumentProxy>
 
-// Share a single worker across all documents. Letting each getDocument() spin up
-// its own worker hangs on the second document, so reuse one (pdf.js multiplexes).
-let sharedWorker = null;
-function getWorker() {
-  if (!sharedWorker) sharedWorker = new pdfjsLib.PDFWorker();
-  return sharedWorker;
-}
-
 function getDoc(file) {
   let doc = docCache.get(file);
   if (!doc) {
-    doc = file
-      .arrayBuffer()
-      .then((data) => pdfjsLib.getDocument({ data, worker: getWorker() }).promise);
+    doc = file.arrayBuffer().then((data) => loadDocument(data));
     docCache.set(file, doc);
   }
   return doc;

@@ -3,11 +3,16 @@ import Sortable from 'sortablejs';
 import * as fileStore from './fileStore.js';
 import * as pageStore from './pageStore.js';
 import { mergePdfs, mergePages } from './pdfMerge.js';
+import { compressPdf, PRESETS } from './pdfCompress.js';
 import { renderThumbnail, clearThumbnailCache } from './thumbnails.js';
 
 // --- Element refs ---
-const mainView = document.getElementById('main-view');
-const editorView = document.getElementById('editor-view');
+const toolTabs = [...document.querySelectorAll('.tool-tab')];
+const panels = {
+  merge: document.getElementById('panel-merge'),
+  pages: document.getElementById('panel-pages'),
+  compress: document.getElementById('panel-compress'),
+};
 
 const dropZone = document.getElementById('drop-zone');
 const browseBtn = document.getElementById('browse-btn');
@@ -16,11 +21,9 @@ const fileList = document.getElementById('file-list');
 const emptyState = document.getElementById('empty-state');
 const fileCount = document.getElementById('file-count');
 const mergeBtn = document.getElementById('merge-btn');
-const editPagesBtn = document.getElementById('edit-pages-btn');
 const outputName = document.getElementById('output-name');
 const errorMsg = document.getElementById('error-msg');
 
-const backBtn = document.getElementById('back-btn');
 const resetPagesBtn = document.getElementById('reset-pages-btn');
 const pageGrid = document.getElementById('page-grid');
 const pageEmpty = document.getElementById('page-empty');
@@ -28,6 +31,11 @@ const pageCount = document.getElementById('page-count');
 const mergePagesBtn = document.getElementById('merge-pages-btn');
 const editorOutputName = document.getElementById('editor-output-name');
 const editorError = document.getElementById('editor-error');
+
+const compressLevels = document.getElementById('compress-levels');
+const compressBtn = document.getElementById('compress-btn');
+const compressError = document.getElementById('compress-error');
+const compressResults = document.getElementById('compress-results');
 
 // --- Helpers ---
 function formatSize(bytes) {
@@ -120,7 +128,7 @@ function renderFileList() {
   emptyState.classList.toggle('hidden', n > 0);
   fileCount.textContent = n > 0 ? `${n} file${n === 1 ? '' : 's'}` : '';
   mergeBtn.disabled = n < 2;
-  editPagesBtn.disabled = n < 1;
+  compressBtn.disabled = n < 1;
 }
 
 async function handleFiles(files) {
@@ -273,25 +281,31 @@ Sortable.create(pageGrid, {
   },
 });
 
-// --- Wiring: view toggle ---
-function showEditor() {
-  // Rebuild from files only if the file set changed; otherwise keep page edits.
-  if (pageStore.syncFrom(fileStore.getOrdered())) clearThumbnailCache();
-  setError(editorError, '');
-  mainView.classList.add('hidden');
-  editorView.classList.remove('hidden');
-  renderPageGrid();
+// --- Wiring: tool nav ---
+const ACTIVE_TAB = ['bg-blue-600', 'text-white', 'shadow-sm'];
+const INACTIVE_TAB = ['text-slate-600', 'hover:bg-slate-50', 'hover:text-slate-900'];
+
+function showTool(name) {
+  for (const tab of toolTabs) {
+    const active = tab.dataset.tool === name;
+    ACTIVE_TAB.forEach((c) => tab.classList.toggle(c, active));
+    INACTIVE_TAB.forEach((c) => tab.classList.toggle(c, !active));
+  }
+  for (const [key, panel] of Object.entries(panels)) {
+    panel.classList.toggle('hidden', key !== name);
+  }
+
+  if (name === 'pages') {
+    // Rebuild from files only if the file set changed; otherwise keep page edits.
+    if (pageStore.syncFrom(fileStore.getOrdered())) clearThumbnailCache();
+    setError(editorError, '');
+    renderPageGrid();
+  }
 }
 
-function showMain() {
-  editorView.classList.add('hidden');
-  mainView.classList.remove('hidden');
-}
-
-editPagesBtn.addEventListener('click', () => {
-  if (fileStore.count() >= 1) showEditor();
-});
-backBtn.addEventListener('click', showMain);
+toolTabs.forEach((tab) =>
+  tab.addEventListener('click', () => showTool(tab.dataset.tool))
+);
 
 resetPagesBtn.addEventListener('click', () => {
   pageStore.rebuildFrom(fileStore.getOrdered());
@@ -311,5 +325,76 @@ mergePagesBtn.addEventListener('click', () => {
   });
 });
 
+// ======================= Compress tool =======================
+let compressLevel = 'recommended';
+
+function renderCompressLevels() {
+  compressLevels.innerHTML = '';
+  for (const [key, preset] of Object.entries(PRESETS)) {
+    const selected = key === compressLevel;
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.dataset.level = key;
+    card.className =
+      'rounded-xl border px-3 py-2.5 text-left transition focus:outline-none focus:ring-2 focus:ring-blue-400 ' +
+      (selected
+        ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
+        : 'border-slate-200 bg-white hover:border-blue-300');
+    card.innerHTML = `
+      <span class="block text-sm font-semibold ${selected ? 'text-blue-700' : 'text-slate-700'}">${preset.label}</span>
+      <span class="mt-0.5 block text-xs text-slate-400">${preset.hint}</span>
+    `;
+    card.addEventListener('click', () => {
+      compressLevel = key;
+      renderCompressLevels();
+    });
+    compressLevels.appendChild(card);
+  }
+}
+
+/** Strip a trailing .pdf (any case) so we can append a suffix cleanly. */
+function baseName(name) {
+  return name.replace(/\.pdf$/i, '');
+}
+
+compressBtn.addEventListener('click', () => {
+  const items = fileStore.getOrdered();
+  if (items.length < 1) return;
+
+  compressResults.innerHTML = '';
+  const preset = PRESETS[compressLevel];
+
+  withMerge(compressBtn, compressError, async () => {
+    for (const item of items) {
+      const bytes = await compressPdf(item.file, preset);
+      const before = item.size;
+      const after = bytes.byteLength;
+      const pct = before > 0 ? Math.round((1 - after / before) * 100) : 0;
+      const smaller = after < before;
+
+      const li = document.createElement('li');
+      li.className =
+        'flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm shadow-sm';
+      li.innerHTML = `
+        <div class="min-w-0 flex-1">
+          <p class="truncate font-medium text-slate-700">${escapeHtml(item.name)}</p>
+          <p class="text-xs text-slate-400">
+            ${formatSize(before)} → ${formatSize(after)}
+            <span class="font-semibold ${smaller ? 'text-green-600' : 'text-amber-600'}">
+              ${smaller ? `−${pct}%` : `+${Math.abs(pct)}%`}
+            </span>
+          </p>
+        </div>
+        <span class="shrink-0 text-xs font-medium text-green-600">Downloaded</span>
+      `;
+      compressResults.appendChild(li);
+
+      downloadPdf(bytes, `${baseName(item.name)}-compressed`);
+    }
+  });
+});
+
 // --- Init ---
 renderFileList();
+renderCompressLevels();
+showTool('merge');

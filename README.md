@@ -1,6 +1,6 @@
 # Singleton PDF Tools
 
-A web app for merging multiple PDF files into one — **everything runs in the
+A web app for merging, editing, and compressing PDF files — **everything runs in the
 browser**, no files are ever uploaded to a server.
 
 **Live demo: [singleton-pdf.vercel.app](https://singleton-pdf.vercel.app)**
@@ -18,7 +18,15 @@ browser**, no files are ever uploaded to a server.
 - Visual thumbnail grid of every page across all files (pdf.js, rendered lazily).
 - Drag individual pages to reorder them — pages from different files can interleave.
 - Drop unwanted pages from the output.
-- "Reset to file order" to start over; page edits survive leaving and reopening the editor.
+- "Reset to file order" to start over; page edits survive switching tools.
+
+**Compression**
+- Shrink PDFs with three quality presets (Less / Recommended / Strong).
+- Pages are rasterized and re-encoded as JPEG — big savings on scanned/image-heavy PDFs.
+- Real before/after sizes shown per file. Note: text becomes non-selectable in the result.
+
+All three tools share one uploaded file list — upload once, switch between Merge, Pages,
+and Compress from the tool nav.
 
 ## Tech Stack
 
@@ -44,16 +52,18 @@ npm run preview  # preview the production build
 
 ## Roadmap
 
-- PDF → image (JPG/PNG), compression, watermarking, password protection.
+- PDF → image (JPG/PNG), watermarking, password protection.
 
 ## Project Structure
 
 ```
-index.html          # dashboard (main view) + page editor view
+index.html          # dashboard: tool nav + shared upload + Merge/Pages/Compress panels
 src/
-  main.js           # UI wiring: views, upload, lists, reorder, merge, download
+  main.js           # UI wiring: tool nav, upload, lists, reorder, merge, compress, download
   pdfMerge.js       # merge logic (pdf-lib): mergePdfs(files) + mergePages(pages)
-  fileStore.js      # file list state
+  pdfCompress.js    # compression (pdf.js raster → JPEG → pdf-lib): compressPdf + PRESETS
+  pdfjs.js          # shared pdf.js worker + loadDocument (used by thumbnails + compress)
+  fileStore.js      # shared file list state (all three tools)
   pageStore.js      # page editor state (flat, ordered page list)
   thumbnails.js     # pdf.js thumbnail rendering + document cache
   style.css         # Tailwind entry
