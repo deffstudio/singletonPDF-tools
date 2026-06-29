@@ -31,6 +31,11 @@ const pageCount = document.getElementById('page-count');
 const mergePagesBtn = document.getElementById('merge-pages-btn');
 const editorOutputName = document.getElementById('editor-output-name');
 const editorError = document.getElementById('editor-error');
+const pageBulkBar = document.getElementById('page-bulk-bar');
+const bulkCount = document.getElementById('bulk-count');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+const bulkClearBtn = document.getElementById('bulk-clear-btn');
+const pagePreview = document.getElementById('page-preview');
 
 const compressLevels = document.getElementById('compress-levels');
 const compressBtn = document.getElementById('compress-btn');

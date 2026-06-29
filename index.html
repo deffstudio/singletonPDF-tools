@@ -104,7 +104,7 @@
         <header class="mb-4">
           <h2 class="text-xl font-bold tracking-tight text-blue-700">Page Editor</h2>
           <p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-            <span>Drag pages to reorder · click <span class="font-medium">×</span> to drop a page from the output.</span>
+            <span>Drag to reorder · click a page to select · use the bar to delete several at once · the search icon previews a page.</span>
             <span id="page-count" class="text-slate-400"></span>
             <button type="button" id="reset-pages-btn"
               class="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100">
@@ -115,11 +115,37 @@
 
         <p id="editor-error" class="mb-3 hidden rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700"></p>
 
-        <div id="page-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5"></div>
+        <!-- Bulk action bar: hidden until at least one page is selected -->
+        <div id="page-bulk-bar" class="mb-3 hidden items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm">
+          <span id="bulk-count" class="font-medium text-blue-700"></span>
+          <button type="button" id="bulk-delete-btn"
+            class="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700">
+            Delete selected
+          </button>
+          <button type="button" id="bulk-clear-btn"
+            class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100">
+            Clear selection
+          </button>
+        </div>
 
-        <p id="page-empty" class="hidden rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400">
-          No pages left. Reset to file order, or add files above.
-        </p>
+        <div class="flex flex-col gap-4 lg:flex-row">
+          <div class="min-w-0 flex-1">
+            <div id="page-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4"></div>
+
+            <p id="page-empty" class="hidden rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400">
+              No pages left. Reset to file order, or add files above.
+            </p>
+          </div>
+
+          <aside class="lg:w-80 lg:shrink-0">
+            <div class="lg:sticky lg:top-4">
+              <h3 class="mb-2 text-sm font-semibold text-slate-700">Preview</h3>
+              <div id="page-preview" class="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-3">
+                <span id="preview-empty" class="px-4 text-center text-xs text-slate-400">Click the search icon on a page to preview it here.</span>
+              </div>
+            </div>
+          </aside>
+        </div>
 
         <div class="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
           <div class="flex-1">
