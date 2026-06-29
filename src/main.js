@@ -231,6 +231,29 @@ function renumberBadges() {
 // Selection itself lives in the pageSelection module.
 let focusedId = null;
 
+function clearPreview() {
+  focusedId = null;
+  pagePreview.innerHTML =
+    '<span id="preview-empty" class="px-4 text-center text-xs text-slate-400">Click the search icon on a page to preview it here.</span>';
+}
+
+function focusPage(id) {
+  const page = pageStore.getOrdered().find((p) => p.id === id);
+  if (!page) {
+    clearPreview();
+    return;
+  }
+  focusedId = id;
+  pagePreview.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  canvas.className = 'max-h-[70vh] w-auto rounded shadow-sm';
+  pagePreview.appendChild(canvas);
+  renderThumbnail(page.file, page.pageIndex, canvas, 600).catch(() => {
+    pagePreview.innerHTML =
+      '<span class="px-4 text-center text-xs text-red-400">preview failed</span>';
+  });
+}
+
 function applySelectionStyles() {
   pageGrid.querySelectorAll('.page-card').forEach((card) => {
     const sel = selection.has(card.dataset.id);
@@ -250,16 +273,15 @@ function toggleSelect(id) {
   applySelectionStyles();
 }
 
-// Forget the focused page when it is removed. The preview DOM is wired in Task 6;
-// here we only clear the id so this task is self-contained and runnable.
+// Forget the focused page when it is removed.
 function resetPreviewIfFocusedRemoved() {
-  focusedId = null;
+  clearPreview();
 }
 
-// Clear all transient editor state. The preview body is added in Task 6.
+// Clear all transient editor state.
 function resetEditorViewState() {
   selection.clear();
-  focusedId = null;
+  clearPreview();
   applySelectionStyles();
 }
 
@@ -279,7 +301,10 @@ function renderPageGrid() {
       <span class="select-badge absolute bottom-9 left-1.5 z-10 hidden rounded-full bg-blue-600 p-0.5 text-white shadow">
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
       </span>
-      <button type="button" class="page-delete absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
+      <button type="button" class="page-zoom absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-blue-600 group-hover:opacity-100" title="Preview page">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6"/></svg>
+      </button>
+      <button type="button" class="page-delete absolute right-1.5 top-9 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
       </button>
       <div class="canvas-wrap flex h-40 cursor-grab items-center justify-center overflow-hidden rounded-lg bg-slate-50">
@@ -302,6 +327,11 @@ function renderPageGrid() {
       // Buttons handle their own clicks; don't toggle selection for them.
       if (e.target.closest('.page-delete') || e.target.closest('.page-zoom')) return;
       toggleSelect(p.id);
+    });
+
+    card.querySelector('.page-zoom').addEventListener('click', (e) => {
+      e.stopPropagation();
+      focusPage(p.id);
     });
 
     card.querySelector('.page-delete').addEventListener('click', (e) => {
