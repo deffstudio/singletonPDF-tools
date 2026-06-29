@@ -9,4 +9,8 @@ dist
 # Private business / strategy / planning docs — never commit (unless explicitly asked)
 business/
 docs/superpowers/
+docs/sessions/
 BACKLOG.md
+
+# Subagent-driven-development scratch (ledger, briefs, reports, diffs)
+.superpowers/
