@@ -49,6 +49,12 @@ export function remove(id) {
   pages = pages.filter((p) => p.id !== id);
 }
 
+/** Remove every page whose id is in `ids` (array or Set), in one pass. */
+export function removeMany(ids) {
+  const idSet = ids instanceof Set ? ids : new Set(ids);
+  pages = pages.filter((p) => !idSet.has(p.id));
+}
+
 /** Move a page from oldIndex to newIndex (kept in sync with drag-and-drop). */
 export function reorder(oldIndex, newIndex) {
   if (
