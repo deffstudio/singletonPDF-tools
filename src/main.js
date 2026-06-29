@@ -2,6 +2,7 @@ import './style.css';
 import Sortable from 'sortablejs';
 import * as fileStore from './fileStore.js';
 import * as pageStore from './pageStore.js';
+import * as selection from './pageSelection.js';
 import { mergePdfs, mergePages } from './pdfMerge.js';
 import { compressPdf, PRESETS } from './pdfCompress.js';
 import { renderThumbnail, clearThumbnailCache } from './thumbnails.js';
@@ -226,6 +227,42 @@ function renumberBadges() {
   });
 }
 
+// Transient editor view state: which page is shown large in the preview pane.
+// Selection itself lives in the pageSelection module.
+let focusedId = null;
+
+function applySelectionStyles() {
+  pageGrid.querySelectorAll('.page-card').forEach((card) => {
+    const sel = selection.has(card.dataset.id);
+    card.classList.toggle('ring-2', sel);
+    card.classList.toggle('ring-blue-500', sel);
+    const badge = card.querySelector('.select-badge');
+    if (badge) badge.classList.toggle('hidden', !sel);
+  });
+  const n = selection.size();
+  pageBulkBar.classList.toggle('hidden', n === 0);
+  pageBulkBar.classList.toggle('flex', n > 0);
+  bulkCount.textContent = n > 0 ? `${n} page${n === 1 ? '' : 's'} selected` : '';
+}
+
+function toggleSelect(id) {
+  selection.toggle(id);
+  applySelectionStyles();
+}
+
+// Forget the focused page when it is removed. The preview DOM is wired in Task 6;
+// here we only clear the id so this task is self-contained and runnable.
+function resetPreviewIfFocusedRemoved() {
+  focusedId = null;
+}
+
+// Clear all transient editor state. The preview body is added in Task 6.
+function resetEditorViewState() {
+  selection.clear();
+  focusedId = null;
+  applySelectionStyles();
+}
+
 function renderPageGrid() {
   const observer = ensureObserver();
   pageGrid.innerHTML = '';
@@ -239,6 +276,9 @@ function renderPageGrid() {
 
     card.innerHTML = `
       <span class="pos-badge absolute left-1.5 top-1.5 z-10 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">${i + 1}</span>
+      <span class="select-badge absolute bottom-9 left-1.5 z-10 hidden rounded-full bg-blue-600 p-0.5 text-white shadow">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+      </span>
       <button type="button" class="page-delete absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
       </button>
@@ -258,7 +298,16 @@ function renderPageGrid() {
     wrap.appendChild(canvas);
     observer.observe(canvas);
 
-    card.querySelector('.page-delete').addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      // Buttons handle their own clicks; don't toggle selection for them.
+      if (e.target.closest('.page-delete') || e.target.closest('.page-zoom')) return;
+      toggleSelect(p.id);
+    });
+
+    card.querySelector('.page-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      selection.remove(p.id);
+      if (focusedId === p.id) resetPreviewIfFocusedRemoved();
       pageStore.remove(p.id);
       renderPageGrid();
     });
@@ -271,19 +320,35 @@ function renderPageGrid() {
   pageGrid.classList.toggle('hidden', n === 0);
   pageCount.textContent = n > 0 ? `(${n} page${n === 1 ? '' : 's'})` : '';
   mergePagesBtn.disabled = n < 1;
+  applySelectionStyles();
 }
 
 // --- Wiring: page reorder ---
 Sortable.create(pageGrid, {
   animation: 150,
   ghostClass: 'opacity-40',
-  filter: '.page-delete', // don't start a drag from the delete button
+  filter: '.page-delete, .page-zoom', // don't start a drag from the per-card buttons
   onEnd: (evt) => {
     if (evt.oldIndex !== evt.newIndex) {
       pageStore.reorder(evt.oldIndex, evt.newIndex);
       renumberBadges();
     }
   },
+});
+
+// --- Wiring: bulk selection actions ---
+bulkDeleteBtn.addEventListener('click', () => {
+  if (selection.size() === 0) return;
+  const ids = selection.ids();
+  if (focusedId && selection.has(focusedId)) resetPreviewIfFocusedRemoved();
+  pageStore.removeMany(ids);
+  selection.clear();
+  renderPageGrid();
+});
+
+bulkClearBtn.addEventListener('click', () => {
+  selection.clear();
+  applySelectionStyles();
 });
 
 // --- Wiring: tool nav ---
@@ -302,7 +367,10 @@ function showTool(name) {
 
   if (name === 'pages') {
     // Rebuild from files only if the file set changed; otherwise keep page edits.
-    if (pageStore.syncFrom(fileStore.getOrdered())) clearThumbnailCache();
+    if (pageStore.syncFrom(fileStore.getOrdered())) {
+      clearThumbnailCache();
+      resetEditorViewState();
+    }
     setError(editorError, '');
     renderPageGrid();
   }
@@ -314,6 +382,7 @@ toolTabs.forEach((tab) =>
 
 resetPagesBtn.addEventListener('click', () => {
   pageStore.rebuildFrom(fileStore.getOrdered());
+  resetEditorViewState();
   setError(editorError, '');
   renderPageGrid();
 });
