@@ -17,7 +17,9 @@ browser**, no files are ever uploaded to a server.
 **Page editor**
 - Visual thumbnail grid of every page across all files (pdf.js, rendered lazily).
 - Drag individual pages to reorder them — pages from different files can interleave.
-- Drop unwanted pages from the output.
+- Click pages to multi-select, then delete them all at once from the bulk action bar.
+- Preview any page large in a dedicated pane (click the page's search icon).
+- Drop a single unwanted page with its × button.
 - "Reset to file order" to start over; page edits survive switching tools.
 
 **Compression**

@@ -2,6 +2,7 @@ import './style.css';
 import Sortable from 'sortablejs';
 import * as fileStore from './fileStore.js';
 import * as pageStore from './pageStore.js';
+import * as selection from './pageSelection.js';
 import { mergePdfs, mergePages } from './pdfMerge.js';
 import { compressPdf, PRESETS } from './pdfCompress.js';
 import { renderThumbnail, clearThumbnailCache } from './thumbnails.js';
@@ -31,6 +32,11 @@ const pageCount = document.getElementById('page-count');
 const mergePagesBtn = document.getElementById('merge-pages-btn');
 const editorOutputName = document.getElementById('editor-output-name');
 const editorError = document.getElementById('editor-error');
+const pageBulkBar = document.getElementById('page-bulk-bar');
+const bulkCount = document.getElementById('bulk-count');
+const bulkDeleteBtn = document.getElementById('bulk-delete-btn');
+const bulkClearBtn = document.getElementById('bulk-clear-btn');
+const pagePreview = document.getElementById('page-preview');
 
 const compressLevels = document.getElementById('compress-levels');
 const compressBtn = document.getElementById('compress-btn');
@@ -221,6 +227,64 @@ function renumberBadges() {
   });
 }
 
+// Transient editor view state: which page is shown large in the preview pane.
+// Selection itself lives in the pageSelection module.
+let focusedId = null;
+
+function clearPreview() {
+  focusedId = null;
+  pagePreview.innerHTML =
+    '<span id="preview-empty" class="px-4 text-center text-xs text-slate-400">Click the search icon on a page to preview it here.</span>';
+}
+
+function focusPage(id) {
+  const page = pageStore.getOrdered().find((p) => p.id === id);
+  if (!page) {
+    clearPreview();
+    return;
+  }
+  focusedId = id;
+  pagePreview.innerHTML = '';
+  const canvas = document.createElement('canvas');
+  canvas.className = 'max-h-[70vh] w-auto rounded shadow-sm';
+  pagePreview.appendChild(canvas);
+  renderThumbnail(page.file, page.pageIndex, canvas, 600).catch(() => {
+    pagePreview.innerHTML =
+      '<span class="px-4 text-center text-xs text-red-400">preview failed</span>';
+  });
+}
+
+function applySelectionStyles() {
+  pageGrid.querySelectorAll('.page-card').forEach((card) => {
+    const sel = selection.has(card.dataset.id);
+    card.classList.toggle('ring-2', sel);
+    card.classList.toggle('ring-blue-500', sel);
+    const badge = card.querySelector('.select-badge');
+    if (badge) badge.classList.toggle('hidden', !sel);
+  });
+  const n = selection.size();
+  pageBulkBar.classList.toggle('hidden', n === 0);
+  pageBulkBar.classList.toggle('flex', n > 0);
+  bulkCount.textContent = n > 0 ? `${n} page${n === 1 ? '' : 's'} selected` : '';
+}
+
+function toggleSelect(id) {
+  selection.toggle(id);
+  applySelectionStyles();
+}
+
+// Forget the focused page when it is removed.
+function resetPreviewIfFocusedRemoved() {
+  clearPreview();
+}
+
+// Clear all transient editor state.
+function resetEditorViewState() {
+  selection.clear();
+  clearPreview();
+  applySelectionStyles();
+}
+
 function renderPageGrid() {
   const observer = ensureObserver();
   pageGrid.innerHTML = '';
@@ -234,7 +298,13 @@ function renderPageGrid() {
 
     card.innerHTML = `
       <span class="pos-badge absolute left-1.5 top-1.5 z-10 rounded-md bg-slate-900/70 px-1.5 py-0.5 text-[11px] font-semibold text-white">${i + 1}</span>
-      <button type="button" class="page-delete absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
+      <span class="select-badge absolute bottom-9 left-1.5 z-10 hidden rounded-full bg-blue-600 p-0.5 text-white shadow">
+        <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
+      </span>
+      <button type="button" class="page-zoom absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-blue-600 group-hover:opacity-100" title="Preview page">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6"/></svg>
+      </button>
+      <button type="button" class="page-delete absolute right-1.5 top-9 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
       </button>
       <div class="canvas-wrap flex h-40 cursor-grab items-center justify-center overflow-hidden rounded-lg bg-slate-50">
@@ -253,7 +323,21 @@ function renderPageGrid() {
     wrap.appendChild(canvas);
     observer.observe(canvas);
 
-    card.querySelector('.page-delete').addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      // Buttons handle their own clicks; don't toggle selection for them.
+      if (e.target.closest('.page-delete') || e.target.closest('.page-zoom')) return;
+      toggleSelect(p.id);
+    });
+
+    card.querySelector('.page-zoom').addEventListener('click', (e) => {
+      e.stopPropagation();
+      focusPage(p.id);
+    });
+
+    card.querySelector('.page-delete').addEventListener('click', (e) => {
+      e.stopPropagation();
+      selection.remove(p.id);
+      if (focusedId === p.id) resetPreviewIfFocusedRemoved();
       pageStore.remove(p.id);
       renderPageGrid();
     });
@@ -266,19 +350,35 @@ function renderPageGrid() {
   pageGrid.classList.toggle('hidden', n === 0);
   pageCount.textContent = n > 0 ? `(${n} page${n === 1 ? '' : 's'})` : '';
   mergePagesBtn.disabled = n < 1;
+  applySelectionStyles();
 }
 
 // --- Wiring: page reorder ---
 Sortable.create(pageGrid, {
   animation: 150,
   ghostClass: 'opacity-40',
-  filter: '.page-delete', // don't start a drag from the delete button
+  filter: '.page-delete, .page-zoom', // don't start a drag from the per-card buttons
   onEnd: (evt) => {
     if (evt.oldIndex !== evt.newIndex) {
       pageStore.reorder(evt.oldIndex, evt.newIndex);
       renumberBadges();
     }
   },
+});
+
+// --- Wiring: bulk selection actions ---
+bulkDeleteBtn.addEventListener('click', () => {
+  if (selection.size() === 0) return;
+  const ids = selection.ids();
+  if (focusedId && selection.has(focusedId)) resetPreviewIfFocusedRemoved();
+  pageStore.removeMany(ids);
+  selection.clear();
+  renderPageGrid();
+});
+
+bulkClearBtn.addEventListener('click', () => {
+  selection.clear();
+  applySelectionStyles();
 });
 
 // --- Wiring: tool nav ---
@@ -297,7 +397,10 @@ function showTool(name) {
 
   if (name === 'pages') {
     // Rebuild from files only if the file set changed; otherwise keep page edits.
-    if (pageStore.syncFrom(fileStore.getOrdered())) clearThumbnailCache();
+    if (pageStore.syncFrom(fileStore.getOrdered())) {
+      clearThumbnailCache();
+      resetEditorViewState();
+    }
     setError(editorError, '');
     renderPageGrid();
   }
@@ -309,6 +412,7 @@ toolTabs.forEach((tab) =>
 
 resetPagesBtn.addEventListener('click', () => {
   pageStore.rebuildFrom(fileStore.getOrdered());
+  resetEditorViewState();
   setError(editorError, '');
   renderPageGrid();
 });

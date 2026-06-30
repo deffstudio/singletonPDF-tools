@@ -9,7 +9,11 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `npm run build` — production build to `dist/`
 - `npm run preview` — serve the production build locally
 
-No test runner or linter is configured yet. Verification is manual: build must pass, then exercise the app in the browser (upload PDFs, reorder, merge, download).
+Pure logic is unit-tested with **Vitest** — run `npm test` (or `npm run test:watch`).
+Currently covered: `src/pageStore.js` and `src/pageSelection.js`. Browser-dependent code
+(pdf.js rendering, SortableJS drag, the DOM wiring in `main.js`) is still verified manually:
+build must pass, then exercise the app in the browser (upload PDFs, reorder, merge, download).
+No linter is configured.
 
 ## Architecture
 
