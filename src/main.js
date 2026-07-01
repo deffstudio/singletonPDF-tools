@@ -6,6 +6,13 @@ import * as selection from './pageSelection.js';
 import { mergePdfs, mergePages } from './pdfMerge.js';
 import { compressPdf, PRESETS } from './pdfCompress.js';
 import { renderThumbnail, clearThumbnailCache } from './thumbnails.js';
+import {
+  t,
+  getLang,
+  setLang,
+  persistLang,
+  detectInitialLang,
+} from './i18n.js';
 
 // --- Element refs ---
 const toolTabs = [...document.querySelectorAll('.tool-tab')];
@@ -42,6 +49,8 @@ const compressLevels = document.getElementById('compress-levels');
 const compressBtn = document.getElementById('compress-btn');
 const compressError = document.getElementById('compress-error');
 const compressResults = document.getElementById('compress-results');
+
+const langSelect = document.getElementById('lang-select');
 
 // --- Helpers ---
 function formatSize(bytes) {
@@ -87,11 +96,11 @@ async function withMerge(button, errorEl, fn) {
   setError(errorEl, '');
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = 'Processing…';
+  button.textContent = t('common.processing');
   try {
     await fn();
   } catch (err) {
-    setError(errorEl, err.message || 'Something went wrong while building the PDF.');
+    setError(errorEl, err.message || t('common.genericError'));
   } finally {
     button.textContent = original;
     button.disabled = false;
@@ -110,14 +119,14 @@ function renderFileList() {
       'flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm';
 
     li.innerHTML = `
-      <span class="drag-handle cursor-grab select-none text-slate-300 hover:text-slate-500" title="Drag to reorder">
+      <span class="drag-handle cursor-grab select-none text-slate-300 hover:text-slate-500" title="${escapeHtml(t('fileItem.dragTitle'))}">
         <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path d="M7 4a1 1 0 110 2 1 1 0 010-2zm0 5a1 1 0 110 2 1 1 0 010-2zm0 5a1 1 0 110 2 1 1 0 010-2zm6-10a1 1 0 110 2 1 1 0 010-2zm0 5a1 1 0 110 2 1 1 0 010-2zm0 5a1 1 0 110 2 1 1 0 010-2z"/></svg>
       </span>
       <div class="min-w-0 flex-1">
         <p class="truncate text-sm font-medium text-slate-700">${escapeHtml(item.name)}</p>
-        <p class="text-xs text-slate-400">${item.pageCount} pages · ${formatSize(item.size)}</p>
+        <p class="text-xs text-slate-400">${escapeHtml(t('fileItem.pages', { n: item.pageCount }))} · ${formatSize(item.size)}</p>
       </div>
-      <button type="button" class="remove-btn rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600" title="Remove">
+      <button type="button" class="remove-btn rounded-md p-1.5 text-slate-400 transition hover:bg-red-50 hover:text-red-600" title="${escapeHtml(t('fileItem.removeTitle'))}">
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
       </button>
     `;
@@ -132,7 +141,7 @@ function renderFileList() {
 
   const n = fileStore.count();
   emptyState.classList.toggle('hidden', n > 0);
-  fileCount.textContent = n > 0 ? `${n} file${n === 1 ? '' : 's'}` : '';
+  fileCount.textContent = n > 0 ? t('files.count', { n }) : '';
   mergeBtn.disabled = n < 2;
   compressBtn.disabled = n < 1;
 }
@@ -144,8 +153,8 @@ async function handleFiles(files) {
   if (skipped.length > 0) {
     setError(
       errorMsg,
-      `Skipped (not a valid PDF): ${skipped.join(', ')}` +
-        (added > 0 ? ` · ${added} file${added === 1 ? '' : 's'} added.` : '')
+      t('upload.skipped', { names: skipped.join(', ') }) +
+        (added > 0 ? ` · ${t('upload.added', { n: added })}` : '')
     );
   }
 }
@@ -210,8 +219,7 @@ function ensureObserver() {
         thumbObserver.unobserve(canvas);
         const { file, pageIndex } = canvas._page;
         renderThumbnail(file, pageIndex, canvas, 180).catch(() => {
-          canvas.parentElement.innerHTML =
-            '<span class="text-xs text-red-400">preview failed</span>';
+          canvas.parentElement.innerHTML = `<span class="text-xs text-red-400">${escapeHtml(t('editor.previewFailed'))}</span>`;
         });
       }
     },
@@ -233,8 +241,7 @@ let focusedId = null;
 
 function clearPreview() {
   focusedId = null;
-  pagePreview.innerHTML =
-    '<span id="preview-empty" class="px-4 text-center text-xs text-slate-400">Click the search icon on a page to preview it here.</span>';
+  pagePreview.innerHTML = `<span id="preview-empty" class="px-4 text-center text-xs text-slate-400">${escapeHtml(t('editor.previewEmpty'))}</span>`;
 }
 
 function focusPage(id) {
@@ -249,8 +256,7 @@ function focusPage(id) {
   canvas.className = 'max-h-[70vh] w-auto rounded shadow-sm';
   pagePreview.appendChild(canvas);
   renderThumbnail(page.file, page.pageIndex, canvas, 600).catch(() => {
-    pagePreview.innerHTML =
-      '<span class="px-4 text-center text-xs text-red-400">preview failed</span>';
+    pagePreview.innerHTML = `<span class="px-4 text-center text-xs text-red-400">${escapeHtml(t('editor.previewFailed'))}</span>`;
   });
 }
 
@@ -265,7 +271,7 @@ function applySelectionStyles() {
   const n = selection.size();
   pageBulkBar.classList.toggle('hidden', n === 0);
   pageBulkBar.classList.toggle('flex', n > 0);
-  bulkCount.textContent = n > 0 ? `${n} page${n === 1 ? '' : 's'} selected` : '';
+  bulkCount.textContent = n > 0 ? t('editor.selected', { n }) : '';
 }
 
 function toggleSelect(id) {
@@ -301,17 +307,17 @@ function renderPageGrid() {
       <span class="select-badge absolute bottom-9 left-1.5 z-10 hidden rounded-full bg-blue-600 p-0.5 text-white shadow">
         <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="m5 13 4 4L19 7"/></svg>
       </span>
-      <button type="button" class="page-zoom absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-blue-600 group-hover:opacity-100" title="Preview page">
+      <button type="button" class="page-zoom absolute right-1.5 top-1.5 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-blue-600 group-hover:opacity-100" title="${escapeHtml(t('editor.zoomTitle'))}">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35M11 18a7 7 0 100-14 7 7 0 000 14zM8 11h6"/></svg>
       </button>
-      <button type="button" class="page-delete absolute right-1.5 top-9 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="Remove page">
+      <button type="button" class="page-delete absolute right-1.5 top-9 z-10 rounded-md bg-white/90 p-1 text-slate-400 opacity-0 shadow transition hover:text-red-600 group-hover:opacity-100" title="${escapeHtml(t('editor.deleteTitle'))}">
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12"/></svg>
       </button>
       <div class="canvas-wrap flex h-40 cursor-grab items-center justify-center overflow-hidden rounded-lg bg-slate-50">
-        <span class="text-xs text-slate-300">loading…</span>
+        <span class="text-xs text-slate-300">${escapeHtml(t('editor.loading'))}</span>
       </div>
-      <p class="mt-1.5 truncate text-[11px] text-slate-500" title="${escapeHtml(p.name)} · page ${p.pageIndex + 1}">
-        ${escapeHtml(p.name)} · p.${p.pageIndex + 1}
+      <p class="mt-1.5 truncate text-[11px] text-slate-500" title="${escapeHtml(p.name)} · ${escapeHtml(t('editor.pageTitle', { n: p.pageIndex + 1 }))}">
+        ${escapeHtml(p.name)} · ${escapeHtml(t('editor.pageAbbrev', { n: p.pageIndex + 1 }))}
       </p>
     `;
 
@@ -348,7 +354,7 @@ function renderPageGrid() {
   const n = pageStore.count();
   pageEmpty.classList.toggle('hidden', n > 0);
   pageGrid.classList.toggle('hidden', n === 0);
-  pageCount.textContent = n > 0 ? `(${n} page${n === 1 ? '' : 's'})` : '';
+  pageCount.textContent = n > 0 ? t('editor.pageCount', { n }) : '';
   mergePagesBtn.disabled = n < 1;
   applySelectionStyles();
 }
@@ -445,8 +451,8 @@ function renderCompressLevels() {
         ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200'
         : 'border-slate-200 bg-white hover:border-blue-300');
     card.innerHTML = `
-      <span class="block text-sm font-semibold ${selected ? 'text-blue-700' : 'text-slate-700'}">${preset.label}</span>
-      <span class="mt-0.5 block text-xs text-slate-400">${preset.hint}</span>
+      <span class="block text-sm font-semibold ${selected ? 'text-blue-700' : 'text-slate-700'}">${escapeHtml(t(`compress.preset.${key}.label`))}</span>
+      <span class="mt-0.5 block text-xs text-slate-400">${escapeHtml(t(`compress.preset.${key}.hint`))}</span>
     `;
     card.addEventListener('click', () => {
       compressLevel = key;
@@ -489,7 +495,7 @@ compressBtn.addEventListener('click', () => {
             </span>
           </p>
         </div>
-        <span class="shrink-0 text-xs font-medium text-green-600">Downloaded</span>
+        <span class="shrink-0 text-xs font-medium text-green-600">${escapeHtml(t('common.downloaded'))}</span>
       `;
       compressResults.appendChild(li);
 
@@ -498,7 +504,38 @@ compressBtn.addEventListener('click', () => {
   });
 });
 
+// ======================= Localization =======================
+/** Translate every static `[data-i18n]` element, plus the title and <html lang>. */
+function applyStaticTranslations(root = document) {
+  root.querySelectorAll('[data-i18n]').forEach((el) => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.title = t('app.documentTitle');
+  document.documentElement.lang = getLang();
+}
+
+/** Re-render all copy after the locale changes (static + dynamically-built). */
+function refreshLanguage() {
+  applyStaticTranslations();
+  renderFileList();
+  renderCompressLevels();
+  renderPageGrid(); // keeps editor copy in sync; harmless while the panel is hidden
+  if (!focusedId) clearPreview();
+}
+
+langSelect.addEventListener('change', () => {
+  const lang = setLang(langSelect.value);
+  langSelect.value = lang; // reflect any normalization
+  persistLang(lang);
+  refreshLanguage();
+});
+
 // --- Init ---
+const initialLang = detectInitialLang();
+setLang(initialLang);
+langSelect.value = initialLang;
+
+applyStaticTranslations();
 renderFileList();
 renderCompressLevels();
 showTool('merge');
