@@ -7,28 +7,38 @@
   </head>
   <body class="min-h-screen bg-slate-50 text-slate-800 antialiased">
     <div class="mx-auto max-w-5xl px-4 py-8 sm:py-12">
+      <!-- Language switcher -->
+      <div class="mb-4 flex justify-end">
+        <label for="lang-select" class="sr-only" data-i18n="lang.label">Language</label>
+        <select id="lang-select"
+          class="rounded-lg border border-slate-300 bg-white px-2.5 py-1.5 text-sm text-slate-600 shadow-sm transition focus:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-100">
+          <option value="en" data-i18n="lang.english">English</option>
+          <option value="id" data-i18n="lang.indonesian">Indonesian</option>
+        </select>
+      </div>
+
       <!-- Header -->
       <header class="mb-6 text-center">
         <h1 class="text-3xl font-bold tracking-tight text-blue-700 sm:text-4xl">
           Singleton PDF
         </h1>
         <p class="mt-2 text-sm text-slate-500">
-          Merge, edit, and compress PDFs. Processed right in your browser —
-          <span class="font-medium text-slate-600">no files are uploaded.</span>
+          <span data-i18n="app.tagline">Merge, edit, and compress PDFs. Processed right in your browser —</span>
+          <span class="font-medium text-slate-600" data-i18n="app.taglineEmphasis">no files are uploaded.</span>
         </p>
       </header>
 
       <!-- Tool nav (segmented) -->
       <nav class="mx-auto mb-6 flex max-w-md rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
-        <button type="button" data-tool="merge"
+        <button type="button" data-tool="merge" data-i18n="nav.merge"
           class="tool-tab flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition">
           Merge
         </button>
-        <button type="button" data-tool="pages"
+        <button type="button" data-tool="pages" data-i18n="nav.pages"
           class="tool-tab flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition">
           Pages
         </button>
-        <button type="button" data-tool="compress"
+        <button type="button" data-tool="compress" data-i18n="nav.compress"
           class="tool-tab flex-1 rounded-lg px-4 py-2 text-sm font-semibold transition">
           Compress
         </button>
@@ -44,13 +54,14 @@
           <svg class="mb-3 h-10 w-10 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
           </svg>
-          <p class="text-base font-medium text-slate-700">
+          <p class="text-base font-medium text-slate-700" data-i18n="drop.title">
             Drag &amp; drop PDF files here
           </p>
-          <p class="mt-1 text-sm text-slate-400">or</p>
+          <p class="mt-1 text-sm text-slate-400" data-i18n="drop.or">or</p>
           <button
             type="button"
             id="browse-btn"
+            data-i18n="drop.choose"
             class="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2"
           >
             Choose PDFs
@@ -64,7 +75,7 @@
         <!-- File list -->
         <section class="mt-6">
           <div class="mb-2 flex items-center justify-between">
-            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500">
+            <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-500" data-i18n="files.heading">
               Files
             </h2>
             <span id="file-count" class="text-xs text-slate-400"></span>
@@ -72,7 +83,7 @@
 
           <ul id="file-list" class="space-y-2"></ul>
 
-          <p id="empty-state" class="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400">
+          <p id="empty-state" class="rounded-xl border border-dashed border-slate-200 bg-white px-4 py-8 text-center text-sm text-slate-400" data-i18n="files.empty">
             No files yet. Add one or more PDFs to get started.
           </p>
         </section>
@@ -82,7 +93,7 @@
       <section id="panel-merge" class="mx-auto mt-8 max-w-3xl">
         <div class="flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
           <div class="flex-1">
-            <label for="output-name" class="mb-1 block text-sm font-medium text-slate-600">
+            <label for="output-name" class="mb-1 block text-sm font-medium text-slate-600" data-i18n="merge.outputLabel">
               Output file name
             </label>
             <div class="flex items-center rounded-lg border border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
@@ -91,22 +102,22 @@
               <span class="select-none px-3 py-2 text-sm text-slate-400">.pdf</span>
             </div>
           </div>
-          <button type="button" id="merge-btn" disabled
+          <button type="button" id="merge-btn" disabled data-i18n="merge.button"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300">
             Merge &amp; Download
           </button>
         </div>
-        <p class="mt-2 text-center text-xs text-slate-400">Add at least 2 PDFs to merge them into one.</p>
+        <p class="mt-2 text-center text-xs text-slate-400" data-i18n="merge.hint">Add at least 2 PDFs to merge them into one.</p>
       </section>
 
       <!-- ================= Panel: Pages (page-level editor) ================= -->
       <section id="panel-pages" class="mt-8 hidden">
         <header class="mb-4">
-          <h2 class="text-xl font-bold tracking-tight text-blue-700">Page Editor</h2>
+          <h2 class="text-xl font-bold tracking-tight text-blue-700" data-i18n="editor.title">Page Editor</h2>
           <p class="mt-0.5 flex flex-wrap items-center gap-x-2 text-sm text-slate-500">
-            <span>Drag to reorder · click a page to select · use the bar to delete several at once · the search icon previews a page.</span>
+            <span data-i18n="editor.help">Drag to reorder · click a page to select · use the bar to delete several at once · the search icon previews a page.</span>
             <span id="page-count" class="text-slate-400"></span>
-            <button type="button" id="reset-pages-btn"
+            <button type="button" id="reset-pages-btn" data-i18n="editor.reset"
               class="ml-auto rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100">
               Reset to file order
             </button>
@@ -118,11 +129,11 @@
         <!-- Bulk action bar: hidden until at least one page is selected -->
         <div id="page-bulk-bar" class="mb-3 hidden items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-4 py-2 text-sm">
           <span id="bulk-count" class="font-medium text-blue-700"></span>
-          <button type="button" id="bulk-delete-btn"
+          <button type="button" id="bulk-delete-btn" data-i18n="editor.bulkDelete"
             class="ml-auto rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-red-700">
             Delete selected
           </button>
-          <button type="button" id="bulk-clear-btn"
+          <button type="button" id="bulk-clear-btn" data-i18n="editor.bulkClear"
             class="rounded-lg border border-slate-300 px-3 py-1.5 text-xs font-medium text-slate-600 transition hover:bg-slate-100">
             Clear selection
           </button>
@@ -132,16 +143,16 @@
           <div class="min-w-0 flex-1">
             <div id="page-grid" class="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4"></div>
 
-            <p id="page-empty" class="hidden rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400">
+            <p id="page-empty" class="hidden rounded-xl border border-dashed border-slate-200 bg-white px-4 py-10 text-center text-sm text-slate-400" data-i18n="editor.empty">
               No pages left. Reset to file order, or add files above.
             </p>
           </div>
 
           <aside class="lg:w-80 lg:shrink-0">
             <div class="lg:sticky lg:top-4">
-              <h3 class="mb-2 text-sm font-semibold text-slate-700">Preview</h3>
+              <h3 class="mb-2 text-sm font-semibold text-slate-700" data-i18n="editor.previewHeading">Preview</h3>
               <div id="page-preview" class="flex min-h-64 items-center justify-center rounded-2xl border border-slate-200 bg-white p-3">
-                <span id="preview-empty" class="px-4 text-center text-xs text-slate-400">Click the search icon on a page to preview it here.</span>
+                <span id="preview-empty" class="px-4 text-center text-xs text-slate-400" data-i18n="editor.previewEmpty">Click the search icon on a page to preview it here.</span>
               </div>
             </div>
           </aside>
@@ -149,7 +160,7 @@
 
         <div class="mt-8 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:flex-row sm:items-end">
           <div class="flex-1">
-            <label for="editor-output-name" class="mb-1 block text-sm font-medium text-slate-600">
+            <label for="editor-output-name" class="mb-1 block text-sm font-medium text-slate-600" data-i18n="merge.outputLabel">
               Output file name
             </label>
             <div class="flex items-center rounded-lg border border-slate-300 focus-within:border-blue-400 focus-within:ring-2 focus-within:ring-blue-100">
@@ -158,7 +169,7 @@
               <span class="select-none px-3 py-2 text-sm text-slate-400">.pdf</span>
             </div>
           </div>
-          <button type="button" id="merge-pages-btn" disabled
+          <button type="button" id="merge-pages-btn" disabled data-i18n="merge.button"
             class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300">
             Merge &amp; Download
           </button>
@@ -168,18 +179,18 @@
       <!-- ================= Panel: Compress ================= -->
       <section id="panel-compress" class="mx-auto mt-8 hidden max-w-3xl">
         <div class="rounded-2xl border border-slate-200 bg-white p-4">
-          <p class="mb-1 block text-sm font-medium text-slate-600">Compression level</p>
+          <p class="mb-1 block text-sm font-medium text-slate-600" data-i18n="compress.levelLabel">Compression level</p>
           <div id="compress-levels" class="grid gap-2 sm:grid-cols-3">
             <!-- level radio cards injected by main.js -->
           </div>
 
           <p class="mt-3 flex items-start gap-1.5 text-xs text-slate-400">
             <svg class="mt-0.5 h-3.5 w-3.5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 0 1 1.063.852l-.708 2.836a.75.75 0 0 0 1.063.853l.041-.021M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Zm-9-3.75h.008v.008H12V8.25Z"/></svg>
-            Pages are rendered as images to shrink the file, so text becomes non-selectable in the result.
+            <span data-i18n="compress.note">Pages are rendered as images to shrink the file, so text becomes non-selectable in the result.</span>
           </p>
 
           <div class="mt-4 flex justify-end">
-            <button type="button" id="compress-btn" disabled
+            <button type="button" id="compress-btn" disabled data-i18n="compress.button"
               class="inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-400 focus:ring-offset-2 disabled:cursor-not-allowed disabled:bg-slate-300">
               Compress &amp; Download
             </button>
@@ -191,10 +202,10 @@
         <!-- Per-file results -->
         <ul id="compress-results" class="mt-4 space-y-2"></ul>
 
-        <p class="mt-2 text-center text-xs text-slate-400">Add at least 1 PDF to compress.</p>
+        <p class="mt-2 text-center text-xs text-slate-400" data-i18n="compress.hint">Add at least 1 PDF to compress.</p>
       </section>
 
-      <footer class="mt-10 text-center text-xs text-slate-400">
+      <footer class="mt-10 text-center text-xs text-slate-400" data-i18n="footer.credits">
         100% client-side · pdf-lib · pdf.js · SortableJS
       </footer>
     </div>
